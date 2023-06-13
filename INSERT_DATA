@@ -1,0 +1,79 @@
+#! /bin/bash
+
+if [[ $1 == "test" ]]
+then
+  PSQL="psql --username=postgres --dbname=worldcuptest -t --no-align -c"
+else
+  PSQL="psql --username=freecodecamp --dbname=worldcup -t --no-align -c"
+fi
+
+# Do not change code above this line. Use the PSQL variable above to query your database.
+
+#REMOVE ALL DATA FROM TABLES
+echo $($PSQL "TRUNCATE games, teams")
+
+
+#INPUT TEAMS AND CREATE TEAM_IDs
+cat games.csv | while IFS="," read YEAR RND WIN OPP WING OPPG
+do
+  
+#INSERT WINNERS
+if [[ $WIN != "winner" ]]
+then
+  #GET TEAM_ID
+  TEAM_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WIN'")
+
+  #IF NOT FOUND
+  if [[ -z $TEAM_ID ]]
+  then
+    #insert team
+    INSERT_TEAM=$($PSQL "INSERT INTO teams(name) VALUES('$WIN')")
+    if [[ $INSERT_TEAM == "INSERT 0 1" ]]
+    then
+      echo $WIN was added.
+    fi
+  fi
+fi
+
+#INSERT OPPONENTS
+if [[ $OPP != "opponent" ]]
+then
+  #GET TEAM_ID
+  TEAM_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPP'")
+
+  #IF NOT FOUND
+  if [[ -z $TEAM_ID ]]
+  then
+    #insert team
+    INSERT_TEAM=$($PSQL "INSERT INTO teams(name) VALUES('$OPP')")
+    if [[ $INSERT_TEAM == "INSERT 0 1" ]]
+    then
+      echo $OPP was added.
+    fi
+  fi
+fi
+
+done
+
+
+#INSERT GAME DATA
+cat games.csv | while IFS="," read YEAR RND WIN OPP WING OPPG
+do
+
+  #GET WIN ID
+  WIN_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$WIN'")
+    
+  #GET OPP ID
+  OPP_ID=$($PSQL "SELECT team_id FROM teams WHERE name='$OPP'")
+
+if [[ $YEAR != year ]]
+then
+  GAME_DATA=$($PSQL "INSERT INTO games(year, round,winner_id, opponent_id, winner_goals, opponent_goals) VALUES($YEAR,'$RND',$WIN_ID,$OPP_ID,$WING,$OPPG)")
+
+  if [[ $GAME_DATA == "INSERT 0 1" ]]
+  then
+    echo During the $YEAR $RND round $WIN beat $OPP with a final score of $WING to $OPPG.
+  fi
+fi
+
+done
